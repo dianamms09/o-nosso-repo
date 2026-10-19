@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Temporizador de pitch · JUNITEC</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  body { margin: 0; background: #175FAA; color: #F6F6F6; font-family: 'Montserrat', Arial, sans-serif; font-weight: 400; line-height: 1.5; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 24px; }
+  h1 { font-weight: 700; font-size: 32px; margin: 0 0 12px; }
+  .barra-titulo { width: 120px; height: 6px; border-radius: 6px; background: #74D1EF; margin-bottom: 20px; }
+  .intro { color: #E2EEFF; margin: 0 0 24px; }
+  .cartao { background: #F6F6F6; color: #3D4F6B; border-radius: 12px; padding: 24px; }
+  .cartao h2 { color: #175FAA; font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+
+  /* Visor do tempo */
+  .visor { background: #74D1EF; color: #0944A1; border-radius: 12px; text-align: center; padding: 24px 12px; transition: background .2s; }
+  .visor.aviso1 { background: #FFE08A; color: #062C6B; }
+  .visor.aviso2 { background: #FF9E80; color: #062C6B; }
+  .visor.fim { background: #0944A1; color: #F6F6F6; }
+  .tempo { font-size: 88px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .estado { font-size: 18px; font-weight: 600; margin-top: 8px; min-height: 28px; }
+
+  .progresso { position: relative; height: 12px; background: #C9DAEE; border-radius: 6px; margin: 24px 0 28px; }
+  .progresso .enchimento { height: 100%; width: 0; background: #175FAA; border-radius: 6px; }
+  .marca { position: absolute; top: -4px; width: 4px; height: 20px; background: #3D4F6B; border-radius: 2px; transform: translateX(-2px); }
+  .marca span { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  .botoes { display: flex; gap: 12px; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 16px; font-weight: 700; border: 0; border-radius: 8px; padding: 12px 20px; cursor: pointer; }
+  .principal { background: #74D1EF; color: #0944A1; flex: 1 1 160px; }
+  .secundario { background: #E2EEFF; color: #175FAA; border: 1px solid #C9DAEE; }
+  .pequeno { padding: 10px 14px; font-size: 14px; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #175FAA; outline-offset: 2px; }
+
+  /* Definições em blocos */
+  .definicoes { margin-top: 24px; padding-top: 20px; border-top: 1px solid #C9DAEE; }
+  .nota { font-size: 12px; margin: 0 0 12px; }
+  .bloco { border: 1px solid #C9DAEE; border-radius: 8px; padding: 12px 16px 16px; margin-bottom: 12px; background: #fff; }
+  .bloco h3 { color: #175FAA; font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+  label { font-size: 12px; font-weight: 600; display: block; margin-top: 8px; }
+  .linha { display: flex; gap: 8px; align-items: center; }
+  input[type=number], input[type=text], select { font-family: inherit; font-size: 16px; color: #3D4F6B; border: 1px solid #C9DAEE; border-radius: 8px; background: #fff; padding: 10px; margin-top: 4px; }
+  input[type=number] { width: 110px; }
+  input[type=text] { width: 100%; }
+  select { flex: 1 1 auto; min-width: 0; }
+  .linha input[type=number], .linha select { margin-top: 4px; }
+  .equiv { font-size: 14px; font-weight: 700; color: #175FAA; white-space: nowrap; margin-top: 4px; }
+  input:disabled, select:disabled { background: #E2EEFF; }
+  .opcao { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; font-weight: 400; }
+  .erro { color: #A12A0A; font-size: 14px; font-weight: 600; min-height: 20px; margin-top: 8px; }
+  footer { max-width: 720px; margin: 0 auto; padding: 0 20px 32px; font-size: 12px; color: #E2EEFF; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 26px; }
+    .tempo { font-size: 64px; }
+    .cartao { padding: 16px; }
+    .linha { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Temporizador de pitch</h1>
+  <div class="barra-titulo"></div>
+  <p class="intro">Para quem vai apresentar um pitch. A app avisa nos momentos que escolheres, com cor, mensagem e som.</p>
+
+  <section class="cartao">
+    <div class="visor" id="visor">
+      <div class="tempo" id="tempo">0:00</div>
+      <div class="estado" id="estado" aria-live="polite">Pronto a começar</div>
+    </div>
+    <div class="progresso" aria-hidden="true">
+      <div class="enchimento" id="enchimento"></div>
+      <div class="marca" id="marca1"><span id="rotulo1"></span></div>
+      <div class="marca" id="marca2"><span id="rotulo2"></span></div>
+    </div>
+    <div class="botoes">
+      <button class="principal" id="btnIniciar">Iniciar</button>
+      <button class="secundario" id="btnRepor">Repor</button>
+      <button class="secundario" id="btnCopiar">Copiar resultado</button>
+    </div>
+
+    <div class="definicoes">
+      <h2>Definições</h2>
+      <p class="nota">Valores de exemplo. Em cada tempo, escolhe a unidade ao lado do número. Nas mensagens, {restante} e {decorrido} são trocados pelo tempo real.</p>
+
+      <div class="bloco">
+        <h3>Duração total</h3>
+        <div class="linha">
+          <input type="number" id="tD" value="3" min="0" step="any" aria-label="Duração total">
+          <select id="uD" aria-label="Unidade da duração"><option value="1">segundos</option><option value="60" selected>minutos</option><option value="3600">horas</option></select>
+          <span class="equiv" id="eqD"></span>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <h3>1.º aviso</h3>
+        <label>Quando (tempo decorrido)</label>
+        <div class="linha">
+          <input type="number" id="t1" value="2" min="0" step="any" aria-label="Momento do 1.º aviso">
+          <select id="u1" aria-label="Unidade do 1.º aviso"><option value="1">segundos</option><option value="60" selected>minutos</option><option value="3600">horas</option></select>
+          <span class="equiv" id="eq1"></span>
+        </div>
+        <label>Mensagem</label>
+        <input type="text" id="m1" value="Atenção: faltam {restante}" maxlength="80">
+        <label>Som</label>
+        <div class="linha"><select id="s1"></select><button class="secundario pequeno" data-testar="1">Testar</button></div>
+      </div>
+
+      <div class="bloco">
+        <h3>2.º aviso</h3>
+        <label>Quando (tempo decorrido)</label>
+        <div class="linha">
+          <input type="number" id="t2" value="165" min="0" step="any" aria-label="Momento do 2.º aviso">
+          <select id="u2" aria-label="Unidade do 2.º aviso"><option value="1" selected>segundos</option><option value="60">minutos</option><option value="3600">horas</option></select>
+          <span class="equiv" id="eq2"></span>
+        </div>
+        <label>Mensagem</label>
+        <input type="text" id="m2" value="Última chamada: faltam {restante}" maxlength="80">
+        <label>Som</label>
+        <div class="linha"><select id="s2"></select><button class="secundario pequeno" data-testar="2">Testar</button></div>
+      </div>
+
+      <div class="bloco">
+        <h3>Fim do tempo</h3>
+        <label>Mensagem</label>
+        <input type="text" id="mF" value="Tempo esgotado. Obrigado!" maxlength="80">
+        <label>Som</label>
+        <div class="linha"><select id="sF"></select><button class="secundario pequeno" data-testar="F">Testar</button></div>
+      </div>
+
+      <label class="opcao"><input type="checkbox" id="som" checked> Som e vibração activos</label>
+      <div class="erro" id="erro"></div>
+    </div>
+  </section>
+</main>
+<footer>Feito pela JUNITEC</footer>
+
+<script>
+  // ---------- Estado ----------
+  var estado = { aCorrer: false, inicio: 0, acumulado: 0, intervalo: null, fase: 'normal', terminou: false };
+  var audio = null;
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- Sons disponíveis ----------
+  var SONS = [['bip','Bip simples'],['duplo','Bip duplo'],['sino','Sino'],['campainha','Campainha'],['gong','Gongo'],['subida','Notas a subir'],['descida','Notas a descer'],['voz','Voz (lê a mensagem)'],['nenhum','Sem som']];
+  var PADRAO = { '1': 'sino', '2': 'duplo', 'F': 'gong' };
+  ['1', '2', 'F'].forEach(function (id) {
+    $('s' + id).innerHTML = SONS.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === PADRAO[id] ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('');
+  });
+
+  // ---------- Tempos (número + unidade, convertido para segundos) ----------
+  function lerSegundos(id) { return Math.round(parseFloat($('t' + id).value) * parseFloat($('u' + id).value)); }
+  function definicoes() { return { duracao: lerSegundos('D'), aviso1: lerSegundos('1'), aviso2: lerSegundos('2') }; }
+
+  function formatar(seg) {
+    var h = Math.floor(seg / 3600), m = Math.floor(seg % 3600 / 60), s = seg % 60;
+    var dois = function (n) { return (n < 10 ? '0' : '') + n; };
+    return h > 0 ? h + ':' + dois(m) + ':' + dois(s) : m + ':' + dois(s);
+  }
+
+  // Mostra a conversão ao lado de cada campo e confirma a ordem dos avisos
+  function validar() {
+    var d = definicoes();
+    ['D', '1', '2'].forEach(function (id) {
+      var v = lerSegundos(id);
+      $('eq' + id).textContent = isFinite(v) ? '= ' + formatar(v) : '';
+    });
+    var ok = d.aviso1 > 0 && d.aviso1 < d.aviso2 && d.aviso2 < d.duracao;
+    $('erro').textContent = ok ? '' : 'Os avisos têm de estar por ordem e antes do fim da duração.';
+    $('btnIniciar').disabled = !ok;
+    $('btnIniciar').style.opacity = ok ? 1 : 0.5;
+    return ok;
+  }
+
+  // ---------- Mensagens ----------
+  function mensagem(id, t, d) {
+    var base = $('m' + id).value.trim() || 'Aviso';
+    return base.replace(/\{restante\}/g, formatar(Math.max(d.duracao - t, 0))).replace(/\{decorrido\}/g, formatar(t));
+  }
+
+  // ---------- Sons ----------
+  function iniciarAudio() {
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (e) {}
+  }
+  // Uma nota: frequência, atraso (s), duração (s), forma de onda, volume
+  function nota(f, atraso, dur, onda, vol) {
+    var o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + atraso;
+    o.type = onda; o.frequency.value = f;
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + dur);
+  }
+  function tocar(tipo, texto) {
+    if (!$('som').checked || tipo === 'nenhum') return;
+    try {
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      if (tipo === 'voz') {
+        if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(texto); u.lang = 'pt-PT'; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+        return;
+      }
+      iniciarAudio(); if (!audio) return;
+      if (tipo === 'bip') nota(660, 0, 0.3, 'sine', 0.25);
+      if (tipo === 'duplo') { nota(880, 0, 0.2, 'sine', 0.25); nota(880, 0.32, 0.2, 'sine', 0.25); }
+      if (tipo === 'sino') { nota(880, 0, 1.4, 'sine', 0.25); nota(1760, 0, 0.8, 'sine', 0.08); nota(2640, 0, 0.4, 'sine', 0.04); }
+      if (tipo === 'campainha') for (var i = 0; i < 4; i++) nota(i % 2 ? 620 : 520, i * 0.16, 0.14, 'square', 0.1);
+      if (tipo === 'gong') { nota(196, 0, 2.4, 'sine', 0.35); nota(294, 0, 1.8, 'sine', 0.15); nota(392, 0, 1.2, 'triangle', 0.08); }
+      if (tipo === 'subida') [523, 659, 784].forEach(function (f, i) { nota(f, i * 0.18, 0.3, 'triangle', 0.25); });
+      if (tipo === 'descida') [784, 659, 523].forEach(function (f, i) { nota(f, i * 0.18, 0.3, 'triangle', 0.25); });
+    } catch (e) { /* sem som, a app continua a funcionar */ }
+  }
+
+  // ---------- Tempo ----------
+  function segundosDecorridos() {
+    return Math.floor((estado.acumulado + (estado.aCorrer ? Date.now() - estado.inicio : 0)) / 1000);
+  }
+
+  // ---------- Interface ----------
+  function desenhar() {
+    var d = definicoes(), t = Math.min(segundosDecorridos(), d.duracao || 0);
+    if (!isFinite(d.duracao) || d.duracao <= 0) return { t: 0, d: d };
+    $('tempo').textContent = formatar(t);
+    $('enchimento').style.width = (t / d.duracao * 100) + '%';
+    $('marca1').style.left = (d.aviso1 / d.duracao * 100) + '%';
+    $('marca2').style.left = (d.aviso2 / d.duracao * 100) + '%';
+    $('rotulo1').textContent = formatar(d.aviso1);
+    $('rotulo2').textContent = formatar(d.aviso2);
+
+    var fase = 'normal', texto = estado.aCorrer ? 'A decorrer' : (t > 0 ? 'Em pausa' : 'Pronto a começar');
+    if (t >= d.duracao) { fase = 'fim'; texto = mensagem('F', t, d); }
+    else if (t >= d.aviso2) { fase = 'aviso2'; texto = mensagem('2', t, d); }
+    else if (t >= d.aviso1) { fase = 'aviso1'; texto = mensagem('1', t, d); }
+    $('visor').className = 'visor ' + (fase === 'normal' ? '' : fase);
+    $('estado').textContent = texto;
+    return { t: t, d: d };
+  }
+
+  // A cada 100 ms: actualiza o ecrã e dispara cada aviso uma só vez
+  function passo() {
+    var antes = estado.fase, r = desenhar(), t = r.t, d = r.d;
+    var fase = t >= d.duracao ? 'fim' : t >= d.aviso2 ? 'aviso2' : t >= d.aviso1 ? 'aviso1' : 'normal';
+    if (fase !== antes) {
+      estado.fase = fase;
+      var id = { aviso1: '1', aviso2: '2', fim: 'F' }[fase];
+      if (id) tocar($('s' + id).value, mensagem(id, t, d));
+      if (fase === 'fim') parar(true);
+    }
+  }
+
+  // ---------- Controlos ----------
+  var CAMPOS = ['tD', 'uD', 't1', 'u1', 't2', 'u2'];
+  function bloquear(sim) { CAMPOS.forEach(function (id) { $(id).disabled = sim; }); }
+
+  function parar(terminou) {
+    clearInterval(estado.intervalo);
+    if (estado.aCorrer) estado.acumulado += Date.now() - estado.inicio;
+    estado.aCorrer = false; estado.terminou = !!terminou;
+    $('btnIniciar').textContent = terminou ? 'Iniciar' : 'Continuar';
+    desenhar();
+  }
+  function iniciar() {
+    if (estado.terminou) repor();
+    if (!validar()) return;
+    iniciarAudio();
+    estado.inicio = Date.now(); estado.aCorrer = true; bloquear(true);
+    $('btnIniciar').textContent = 'Pausar';
+    estado.intervalo = setInterval(passo, 100);
+    passo();
+  }
+  function repor() {
+    clearInterval(estado.intervalo);
+    estado = { aCorrer: false, inicio: 0, acumulado: 0, intervalo: null, fase: 'normal', terminou: false };
+    bloquear(false); validar(); desenhar();
+    $('btnIniciar').textContent = 'Iniciar';
+  }
+  function copiar() {
+    var d = definicoes(), t = Math.min(segundosDecorridos(), d.duracao);
+    var texto = 'Pitch: ' + formatar(t) + ' de ' + formatar(d.duracao) + (t >= d.duracao ? ' (tempo esgotado)' : '');
+    var aviso = function (m) { $('estado').textContent = m; };
+    try { navigator.clipboard.writeText(texto).then(function () { aviso('Copiado: ' + texto); }, function () { aviso(texto); }); }
+    catch (e) { aviso(texto); }
+  }
+  // Botão "Testar": ouve o som e vê a mensagem com valores de exemplo
+  function testar(id) {
+    var d = definicoes(), t = id === 'F' ? d.duracao : (id === '1' ? d.aviso1 : d.aviso2);
+    if (!isFinite(t)) return;
+    var texto = mensagem(id, t, d);
+    $('estado').textContent = 'Teste: ' + texto;
+    tocar($('s' + id).value, texto);
+  }
+
+  $('btnIniciar').onclick = function () { estado.aCorrer ? parar(false) : iniciar(); };
+  $('btnRepor').onclick = repor;
+  $('btnCopiar').onclick = copiar;
+  document.querySelectorAll('[data-testar]').forEach(function (b) { b.onclick = function () { testar(b.getAttribute('data-testar')); }; });
+  CAMPOS.concat(['m1', 'm2', 'mF']).forEach(function (id) { $(id).oninput = function () { validar(); desenhar(); }; });
+
+  validar(); desenhar();
+</script>
+</body>
+</html>
